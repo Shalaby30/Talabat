@@ -1,0 +1,29 @@
+{
+  "name": "Order & Phone Copier",
+  "description": "Copy order numbers and phone numbers BY Mohamed Shalaby",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "clipboardWrite"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+  "copy-order": {
+    "suggested_key": {
+      "default": "Alt+3"
+    },
+    "description": "Copy order number with #"
+  },
+  "copy-phone": {
+    "suggested_key": {
+      "default": "Alt+2"
+    },
+    "description": "Copy phone number"
+  }
+}
+
+}

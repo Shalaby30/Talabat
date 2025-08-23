@@ -1,0 +1,8 @@
+.order-timer {
+  font-size: 16px;
+  font-weight: bold;
+  color: red;
+  /* أحمر */
+  margin-left: 10px;
+  display: inline-block;
+}
