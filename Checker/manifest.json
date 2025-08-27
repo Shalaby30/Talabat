@@ -1,0 +1,20 @@
+{
+    "manifest_version": 3,
+    "name": "Order checker",
+    "description": "Mohamed Shalaby",
+    "version": "1.1",
+    "permissions": [
+        "scripting",
+        "activeTab"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ]
+}
