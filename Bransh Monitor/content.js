@@ -16,7 +16,6 @@
   }
 
   function createButton(orderEl, orderId, timers) {
-    // لو الزرار موجود قبل كده متعملش حاجة
     if (orderEl.querySelector(".order-timer-btn")) return;
 
     const wrapper = document.createElement("span");
@@ -57,9 +56,9 @@
         requestAnimationFrame(tick);
       } else {
         btn.textContent = "⏰ Done!";
+        btn.style.color = "green"; // يبان أوضح انه خلص
         delete timers[orderId];
         saveTimers(timers);
-        // هنا بيسيبها Done على طول (من غير ما ترجع Start)
       }
     }
     tick();
@@ -68,6 +67,9 @@
   function observeOrders() {
     const timers = loadTimers();
 
+    const tbody = document.querySelector("tbody");
+    if (!tbody) return;
+
     const observer = new MutationObserver(() => {
       document.querySelectorAll(".header-medium.bold").forEach(orderEl => {
         const orderId = orderEl.textContent.trim();
@@ -75,9 +77,9 @@
       });
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(tbody, { childList: true, subtree: true });
 
-    // تشغيل مبدئي
+    // أول تشغيل
     document.querySelectorAll(".header-medium.bold").forEach(orderEl => {
       const orderId = orderEl.textContent.trim();
       createButton(orderEl, orderId, timers);
