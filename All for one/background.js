@@ -28,6 +28,11 @@ chrome.commands.onCommand.addListener((command) => {
                         .catch(err => console.error("❌ Clipboard error:", err));
                 }
             });
+        } else if (command === "copy-payment") {
+            chrome.scripting.executeScript({
+                target: { tabId },
+                function: bh_copyPaymentMethod
+            });
         }
     });
 });
@@ -64,4 +69,54 @@ function bh_copyFormattedPhone() {
     navigator.clipboard.writeText(phoneNumber)
         .then(() => console.log(`✅ Phone number copied: ${phoneNumber}`))
         .catch(err => console.error('❌ Clipboard error:', err));
+}
+
+// ========== New function for Payment ==========
+function bh_copyPaymentMethod() {
+    let payment = "";
+
+    // 1- نجيب وسيلة الدفع
+    const captions = document.querySelectorAll("wk-ui-caption .caption");
+
+    captions.forEach(span => {
+        const text = span.textContent.trim();
+
+        if (/CASH/i.test(text)) {
+            payment = "كاش";
+        } else if (text.includes("الدفع عبر")) {
+            payment = "فيزا";
+        }
+    });
+
+    if (!payment) {
+        console.log("❌ Payment method not found");
+        return;
+    }
+
+    // 2- 
+    let discountText = "";
+    const discountHeader = Array.from(document.querySelectorAll("mat-expansion-panel-header"))
+        .find(header => {
+            const label = header.querySelector("label");
+            return label && label.textContent.trim().toLowerCase() === "discount";
+        });
+
+    if (discountHeader) {
+        const priceElement = discountHeader.querySelector("p.medium");
+        if (priceElement) {
+            let rawText = priceElement.textContent.trim();
+            // 
+            let cleanNumber = rawText.replace(/[^\d.]/g, "");
+            if (cleanNumber) {
+                discountText = ` + خصم ${cleanNumber} ج`;
+            }
+        }
+    }
+
+    // 3- 
+    const finalText = payment + discountText;
+
+    navigator.clipboard.writeText(finalText)
+        .then(() => console.log(`✅ Payment copied: ${finalText}`))
+        .catch(err => console.error("❌ Clipboard error:", err));
 }
