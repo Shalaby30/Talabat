@@ -1,0 +1,53 @@
+{
+    "manifest_version": 3,
+    "name": "Order Info Extractor",
+    "version": "1.2",
+    "description": "Show clean order details in popup when pressing Alt+0",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "tabs"
+    ],
+    "host_permissions": [
+        "https://web.me.restaurant-partners.com/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "commands": {
+        "show-order": {
+            "suggested_key": {
+                "default": "Alt+0"
+            },
+            "description": "Show current order details"
+        },
+        "copy-order-number": {
+            "suggested_key": {
+                "default": "Alt+1"
+            },
+            "description": "Copy order number to clipboard"
+        },
+        "copy-order-id": {
+            "suggested_key": {
+                "default": "Alt+2"
+            },
+            "description": "Copy external order ID to clipboard"
+        },
+        "copy-customer-arrival": {
+            "suggested_key": {
+                "default": "Alt+3"
+            },
+            "description": "Copy customer arrival text"
+        }
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://web.me.restaurant-partners.com/*"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ]
+}
