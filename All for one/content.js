@@ -135,9 +135,9 @@ const ot_bodyCheck = setInterval(() => {
     }
 }, 1000);
 
-// --- 3. Order Timers ---
-(function () {
+// --- 3. Order Timers ---(function () {
     const TIMER_KEY = "orderTimers";
+    const COUNT_KEY = "orderCount"; 
 
     function loadTimers() {
         return JSON.parse(localStorage.getItem(TIMER_KEY) || "{}");
@@ -145,6 +145,14 @@ const ot_bodyCheck = setInterval(() => {
 
     function saveTimers(timers) {
         localStorage.setItem(TIMER_KEY, JSON.stringify(timers));
+    }
+
+    function loadCount() {
+        return parseInt(localStorage.getItem(COUNT_KEY) || "0", 10);
+    }
+
+    function saveCount(count) {
+        localStorage.setItem(COUNT_KEY, count);
     }
 
     function formatTime(seconds) {
@@ -183,6 +191,10 @@ const ot_bodyCheck = setInterval(() => {
                     timers[orderId] = Math.floor(Date.now() / 1000) + 15 * 60;
                     saveTimers(timers);
                     updateCountdown(btn, orderId, timers);
+                    let count = loadCount();
+                    count++;
+                    saveCount(count);
+                    console.log(`📦 إجمالي الأوردرات حتى الآن: ${count}`);
                 }
             });
         });
@@ -205,3 +217,5 @@ const ot_bodyCheck = setInterval(() => {
 
     setInterval(attachButtons, 2000);
 })();
+
+
