@@ -2,6 +2,161 @@
 // Content script
 // =========================
 
+// =========================
+// Show Order Counter on ALT + 0
+// =========================
+
+// --- 0. Toast function ---
+function showToast(message, success = true) {
+    const toast = document.createElement("div");
+    toast.textContent = message;
+    toast.style.position = "fixed";
+    toast.style.bottom = "20px";
+    toast.style.right = "20px";
+    toast.style.background = success ? "rgba(0,128,0,0.85)" : "rgba(200,0,0,0.85)";
+    toast.style.color = "#fff";
+    toast.style.padding = "10px 15px";
+    toast.style.borderRadius = "6px";
+    toast.style.fontSize = "14px";
+    toast.style.zIndex = 9999;
+    toast.style.opacity = "1";
+    toast.style.transition = "opacity 0.3s ease";
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        setTimeout(() => toast.remove(), 300);
+    }, 1500);
+}
+
+// --- 1. Clipboard functions ---
+
+document.addEventListener("keydown", (e) => {
+    // ALT + 0
+    if (e.altKey && e.code === "Digit0") {
+        const count = parseInt(localStorage.getItem("orderCounter") || "0");
+        showToast("Order Counter: " + count);
+        e.preventDefault(); 
+    }
+});
+ 
+function OrderCounterDisplay() {
+    let x = localStorage.getItem('orderCounter') || "0";
+    showToast("Order Counter: " + x);
+}
+
+function copyOrderNumber() {
+    const orderHeader = document.querySelector('.striped-info .title-wrapper wk-ui-title .header');
+    if (!orderHeader) return showToast('❌ Order header not found', false);
+
+    const match = orderHeader.textContent.match(/#\d+/);
+    if (!match) return showToast('❌ Order number not found', false);
+
+    navigator.clipboard.writeText(match[0])
+        .then(() => showToast(`✅ Copied: ${match[0]}`))
+        .catch(() => showToast('❌ Clipboard error', false));
+}
+
+function copyPhoneNumber() {
+    const phoneEl = document.querySelector('.striped-info .external-id-wrapper p.medium');
+    if (!phoneEl) return showToast('❌ Phone not found', false);
+
+    navigator.clipboard.writeText(" " + phoneEl.textContent)
+        .then(() => showToast(`✅ Copied: ${phoneEl.textContent}`))
+        .catch(() => showToast('❌ Clipboard error', false));
+}
+
+function copyPayment() {
+    let payment = "";
+    document.querySelectorAll("wk-ui-caption .caption").forEach(span => {
+        const t = span.textContent.trim();
+        if (/CASH/i.test(t)) payment = "كاش";
+        else if (t.includes("الدفع عبر")) payment = "فيزا";
+    });
+    if (!payment) return showToast("❌ Payment not found", false);
+
+    const phoneEl = document.querySelector('.striped-info .external-id-wrapper p.medium');
+    if (!phoneEl) return showToast("❌ Phone not found", false);
+
+    let discountText = "";
+    const discountHeader = Array.from(document.querySelectorAll("mat-expansion-panel-header"))
+        .find(h => h.querySelector("label")?.textContent.trim().toLowerCase() === "discount");
+    if (discountHeader) {
+        const p = discountHeader.querySelector("p.medium");
+        if (p) discountText = ` + خصم ${p.textContent.replace(/[^\d.]/g,"")} ج`;
+    }
+
+    const finalText = payment + discountText + " // " + phoneEl.textContent;
+
+    navigator.clipboard.writeText(finalText)
+        .then(() => showToast(`✅ Copied: ${finalText}`))
+        .catch(() => showToast("❌ Clipboard error", false));
+}
+
+function copyBranchNote() {
+    // Read raw value and normalize
+    const raw = localStorage.getItem('RestaurantApp.user-name') || "";
+    let candidate = raw;
+
+    // Try to JSON.parse wrapped values like: "\"faisal@...\"" or objects
+    try {
+        if ((candidate.startsWith('"') && candidate.endsWith('"')) ||
+            candidate.startsWith('{') || candidate.startsWith('[')) {
+            const parsed = JSON.parse(candidate);
+            if (typeof parsed === 'string') candidate = parsed;
+            else if (parsed && typeof parsed === 'object') {
+                // pick first string value that looks like an email
+                const found = Object.values(parsed).find(v => typeof v === 'string' && /@/.test(v));
+                if (found) candidate = found;
+            }
+        }
+    } catch (e) {
+        // ignore JSON parse errors and continue with raw value
+    }
+
+    // Extract an email if present, otherwise use the cleaned candidate
+    const emailMatch = String(candidate).match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+    const key = (emailMatch ? emailMatch[0] : String(candidate))
+        .trim()
+        .toLowerCase()
+        .replace(/^"|"$/g, ""); // remove stray quotes
+
+    const branchMap = {
+        "zahraa@karamelsham.org": "حضورعميل زهراء معادى",
+        "shubra@karamelsham.org": "حضورعميل شيرا تك واى",
+        "october@karamelsham.org": "حضور عميل اكتوبر",
+        "helwan@karamelsham.org": "حضور عميل  حلوان",
+        "gdida@karamelsham.org": "حضورعميل مصر الجديده",
+        "maskan@karamelsham.org": "حضورعميل-الف",
+        "talat@karamelsham.org": "حضور عميل طلعت حرب",
+        "faisal@karamelsham.org": "حضور عميل فيصل",
+        "mohandseen@karamelsham.org": "حضور عميل المهندسين"
+    };
+
+    const text = branchMap[key] || "";
+
+    if (!text) {
+        // Log the raw value to help debugging and show a helpful toast
+        console.log('copyBranchNote: RestaurantApp.user-name raw value =>', raw);
+        return showToast(`❌ Branch note not found for user: ${raw}`, false);
+    }
+
+    navigator.clipboard.writeText(text)
+        .then(() => showToast(`✅ Copied: ${text}`))
+        .catch(() => showToast("❌ Clipboard error", false));
+}
+
+// --- 2. Listen for messages from background.js ---
+chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.action === "copyOrder") copyOrderNumber();
+    else if (msg.action === "copyPhone") copyPhoneNumber();
+    else if (msg.action === "copyPayment") copyPayment();
+    else if (msg.action === "copyBranch") copyBranchNote();
+});
+// =========================
+// Content script
+// =========================
+
 // --- 1. Coloring headers (Discount / Lifecycle) ---
 function ch_addStyleToHeaders() {
     const headers = document.querySelectorAll("mat-expansion-panel-header");
@@ -135,9 +290,11 @@ const ot_bodyCheck = setInterval(() => {
     }
 }, 1000);
 
-// --- 3. Order Timers ---(function () {
+// --- 3. Order Timers ---
+// --- 3. Order Timers + Order Counter ---
+(function () {
     const TIMER_KEY = "orderTimers";
-    const COUNT_KEY = "orderCount"; 
+    const COUNTER_KEY = "orderCounter";
 
     function loadTimers() {
         return JSON.parse(localStorage.getItem(TIMER_KEY) || "{}");
@@ -147,12 +304,15 @@ const ot_bodyCheck = setInterval(() => {
         localStorage.setItem(TIMER_KEY, JSON.stringify(timers));
     }
 
-    function loadCount() {
-        return parseInt(localStorage.getItem(COUNT_KEY) || "0", 10);
+    function loadCounter() {
+        return parseInt(localStorage.getItem(COUNTER_KEY) || "0");
     }
 
-    function saveCount(count) {
-        localStorage.setItem(COUNT_KEY, count);
+    function incrementCounter() {
+        let count = loadCounter();
+        count++;
+        localStorage.setItem(COUNTER_KEY, count);
+        console.log("✅ Orders started:", count);
     }
 
     function formatTime(seconds) {
@@ -191,10 +351,9 @@ const ot_bodyCheck = setInterval(() => {
                     timers[orderId] = Math.floor(Date.now() / 1000) + 15 * 60;
                     saveTimers(timers);
                     updateCountdown(btn, orderId, timers);
-                    let count = loadCount();
-                    count++;
-                    saveCount(count);
-                    console.log(`📦 إجمالي الأوردرات حتى الآن: ${count}`);
+
+                    // ✅ زيادة عداد الأوردرات عند الضغط على Start فقط
+                    incrementCounter();
                 }
             });
         });
@@ -217,5 +376,3 @@ const ot_bodyCheck = setInterval(() => {
 
     setInterval(attachButtons, 2000);
 })();
-
-
