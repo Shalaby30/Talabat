@@ -11,8 +11,8 @@ function showToast(message, success = true) {
     const toast = document.createElement("div");
     toast.textContent = message;
     toast.style.position = "fixed";
-    toast.style.bottom = "20px";
-    toast.style.right = "20px";
+    toast.style.bottom = "80px";
+    toast.style.left = "20px";
     toast.style.background = success ? "rgba(0,128,0,0.85)" : "rgba(200,0,0,0.85)";
     toast.style.color = "#fff";
     toast.style.padding = "10px 15px";
@@ -29,26 +29,61 @@ function showToast(message, success = true) {
     }, 1500);
 }
 
-// --- 1. Clipboard functions ---
+// --- Persistent Order Counter Widget ---
+function createPersistentOrderCounter() {
+    if (document.getElementById("order-counter-widget")) return;
 
-document.addEventListener("keydown", (e) => {
-    // ALT + 0
-    if (e.altKey && e.code === "Digit0") {
-        const count = parseInt(localStorage.getItem("orderCounter") || "0");
-        showToast("Order Counter: " + count);
-        e.preventDefault(); 
-    }
-});
- 
-function OrderCounterDisplay() {
-    let x = localStorage.getItem('orderCounter') || "0";
-    showToast("Order Counter: " + x);
+    const counterBox = document.createElement("div");
+    counterBox.id = "order-counter-widget";
+    counterBox.style.position = "fixed";
+    counterBox.style.bottom = "20px";
+    counterBox.style.right = "20px";
+    counterBox.style.background = "#000";
+    counterBox.style.color = "#fff";
+    counterBox.style.padding = "10px 15px";
+    counterBox.style.borderRadius = "6px";
+    counterBox.style.fontSize = "14px";
+    counterBox.style.fontWeight = "bold";
+    counterBox.style.zIndex = 99999;
+    counterBox.style.cursor = "pointer";
+    counterBox.style.userSelect = "none";
+    counterBox.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
+    counterBox.textContent = " Orders: 0";
+
+    // counterBox.addEventListener("click", () => {
+    //     localStorage.setItem("orderCounter", "0");
+    //     updatePersistentCounter();
+    //     showToast(" Counter reset to 0");
+    // });
+
+    document.body.appendChild(counterBox);
+    updatePersistentCounter();
 }
+
+function updatePersistentCounter() {
+    const count = parseInt(localStorage.getItem("orderCounter") || "0");
+    const counterBox = document.getElementById("order-counter-widget");
+    if (counterBox) counterBox.textContent = ` Orders: ${count}`;
+}
+
+window.addEventListener("storage", (e) => {
+    if (e.key === "orderCounter") updatePersistentCounter();
+});
+
+createPersistentOrderCounter();
+
+// --- 1. Clipboard functions ---
+// document.addEventListener("keydown", (e) => {
+//     if (e.altKey && e.code === "Digit0") {
+//         const count = parseInt(localStorage.getItem("orderCounter") || "0");
+//         showToast("Order Counter: " + count);
+//         e.preventDefault();
+//     }
+// });
 
 function copyOrderNumber() {
     const orderHeader = document.querySelector('.striped-info .title-wrapper wk-ui-title .header');
     if (!orderHeader) return showToast('❌ Order header not found', false);
-
     const match = orderHeader.textContent.match(/#\d+/);
     if (!match) return showToast('❌ Order number not found', false);
 
@@ -60,7 +95,6 @@ function copyOrderNumber() {
 function copyPhoneNumber() {
     const phoneEl = document.querySelector('.striped-info .external-id-wrapper p.medium');
     if (!phoneEl) return showToast('❌ Phone not found', false);
-
     navigator.clipboard.writeText(" " + phoneEl.textContent)
         .then(() => showToast(`✅ Copied: ${phoneEl.textContent}`))
         .catch(() => showToast('❌ Clipboard error', false));
@@ -83,7 +117,7 @@ function copyPayment() {
         .find(h => h.querySelector("label")?.textContent.trim().toLowerCase() === "discount");
     if (discountHeader) {
         const p = discountHeader.querySelector("p.medium");
-        if (p) discountText = ` + خصم ${p.textContent.replace(/[^\d.]/g,"")} ج`;
+        if (p) discountText = ` + خصم ${p.textContent.replace(/[^\d.]/g, "")} ج`;
     }
 
     const finalText = payment + discountText + " // " + phoneEl.textContent;
@@ -94,32 +128,22 @@ function copyPayment() {
 }
 
 function copyBranchNote() {
-    // Read raw value and normalize
     const raw = localStorage.getItem('RestaurantApp.user-name') || "";
     let candidate = raw;
-
-    // Try to JSON.parse wrapped values like: "\"faisal@...\"" or objects
     try {
         if ((candidate.startsWith('"') && candidate.endsWith('"')) ||
             candidate.startsWith('{') || candidate.startsWith('[')) {
             const parsed = JSON.parse(candidate);
             if (typeof parsed === 'string') candidate = parsed;
             else if (parsed && typeof parsed === 'object') {
-                // pick first string value that looks like an email
                 const found = Object.values(parsed).find(v => typeof v === 'string' && /@/.test(v));
                 if (found) candidate = found;
             }
         }
-    } catch (e) {
-        // ignore JSON parse errors and continue with raw value
-    }
+    } catch { }
 
-    // Extract an email if present, otherwise use the cleaned candidate
     const emailMatch = String(candidate).match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
-    const key = (emailMatch ? emailMatch[0] : String(candidate))
-        .trim()
-        .toLowerCase()
-        .replace(/^"|"$/g, ""); // remove stray quotes
+    const key = (emailMatch ? emailMatch[0] : String(candidate)).trim().toLowerCase().replace(/^"|"$/g, "");
 
     const branchMap = {
         "zahraa@karamelsham.org": "حضورعميل زهراء معادى",
@@ -134,47 +158,32 @@ function copyBranchNote() {
     };
 
     const text = branchMap[key] || "";
-
-    if (!text) {
-        // Log the raw value to help debugging and show a helpful toast
-        console.log('copyBranchNote: RestaurantApp.user-name raw value =>', raw);
-        return showToast(`❌ Branch note not found for user: ${raw}`, false);
-    }
+    if (!text) return showToast(`❌ Branch note not found for user: ${raw}`, false);
 
     navigator.clipboard.writeText(text)
         .then(() => showToast(`✅ Copied: ${text}`))
         .catch(() => showToast("❌ Clipboard error", false));
 }
 
-// --- 2. Listen for messages from background.js ---
 chrome.runtime.onMessage.addListener((msg) => {
     if (msg.action === "copyOrder") copyOrderNumber();
     else if (msg.action === "copyPhone") copyPhoneNumber();
     else if (msg.action === "copyPayment") copyPayment();
     else if (msg.action === "copyBranch") copyBranchNote();
 });
-// =========================
-// Content script
-// =========================
 
 // --- 1. Coloring headers (Discount / Lifecycle) ---
 function ch_addStyleToHeaders() {
     const headers = document.querySelectorAll("mat-expansion-panel-header");
-
     headers.forEach(header => {
         const label = header.querySelector("label");
         if (!label) return;
-
         const text = label.textContent.trim().toLowerCase();
         if (text === "discount" || text === "lifecycle") {
-            header.setAttribute(
-                "style",
-                "background-color:red; border-radius:6px;"
-            );
+            header.setAttribute("style", "background-color:red; border-radius:6px;");
         }
     });
 }
-
 ch_addStyleToHeaders();
 const ch_observer = new MutationObserver(ch_addStyleToHeaders);
 ch_observer.observe(document.body, { childList: true, subtree: true });
@@ -183,17 +192,10 @@ ch_observer.observe(document.body, { childList: true, subtree: true });
 function ot_parsePrice(text) {
     if (!text) return 0;
     let normalized = text.replace(/[^\d.,]/g, "").trim();
-
     const parts = normalized.split(".");
-    if (parts.length > 2) {
-        normalized = parts.slice(0, -1).join("") + "." + parts[parts.length - 1];
-    }
-
+    if (parts.length > 2) normalized = parts.slice(0, -1).join("") + "." + parts[parts.length - 1];
     const commaParts = normalized.split(",");
-    if (commaParts.length > 2) {
-        normalized = commaParts.slice(0, -1).join("") + "." + commaParts[commaParts.length - 1];
-    }
-
+    if (commaParts.length > 2) normalized = commaParts.slice(0, -1).join("") + "." + commaParts[commaParts.length - 1];
     return parseFloat(normalized) || 0;
 }
 
@@ -207,7 +209,6 @@ function ot_formatPrice(num) {
 function ot_calculateOrderTotal(modal) {
     const itemsContainer = modal.querySelector("#order-items");
     if (!itemsContainer) return;
-
     const items = itemsContainer.querySelectorAll(".item");
     let total = 0;
 
@@ -222,29 +223,24 @@ function ot_calculateOrderTotal(modal) {
         const priceEl = item.querySelector(".item-price p");
         let parentPrice = 0;
         if (priceEl) parentPrice = ot_parsePrice(priceEl.textContent);
-
         total += parentPrice;
 
         const modifiers = item.querySelectorAll(".item-modifier");
         modifiers.forEach(mod => {
             const modPriceEl = mod.querySelector(".modifier-price p");
             if (!modPriceEl) return;
-
             let modPrice = ot_parsePrice(modPriceEl.textContent);
-
             let modQty = 1;
             const modQtyEl = mod.querySelector(".modifier-amount p");
             if (modQtyEl) {
                 const m = modQtyEl.textContent.match(/(\d+)/);
                 if (m) modQty = parseInt(m[1]);
             }
-
             total += modPrice * parentQty * modQty;
         });
     });
 
     console.log("✅ إجمالي الأوردر:", ot_formatPrice(total));
-
     let totalBox = itemsContainer.querySelector(".my-order-total");
     if (!totalBox) {
         totalBox = document.createElement("div");
@@ -264,18 +260,14 @@ function ot_calculateOrderTotal(modal) {
     totalBox.textContent = `إجمالي الأوردر : ${ot_formatPrice(total)} ج.م`;
 
     const feeElement = itemsContainer.querySelector(".fee");
-    if (feeElement && feeElement.parentNode) {
-        feeElement.parentNode.insertBefore(totalBox, feeElement);
-    } else {
-        itemsContainer.appendChild(totalBox);
-    }
+    if (feeElement && feeElement.parentNode) feeElement.parentNode.insertBefore(totalBox, feeElement);
+    else itemsContainer.appendChild(totalBox);
 }
 
 const ot_bodyCheck = setInterval(() => {
     const target = document.querySelector(".body");
     if (target) {
         clearInterval(ot_bodyCheck);
-
         const observer = new MutationObserver((mutations) => {
             mutations.forEach(m => {
                 m.addedNodes.forEach(node => {
@@ -285,13 +277,11 @@ const ot_bodyCheck = setInterval(() => {
                 });
             });
         });
-
         observer.observe(target, { childList: true, subtree: true });
     }
 }, 1000);
 
-// --- 3. Order Timers ---
-// --- 3. Order Timers + Order Counter ---
+// --- 3. Order Timers + Counter ---
 (function () {
     const TIMER_KEY = "orderTimers";
     const COUNTER_KEY = "orderCounter";
@@ -304,14 +294,11 @@ const ot_bodyCheck = setInterval(() => {
         localStorage.setItem(TIMER_KEY, JSON.stringify(timers));
     }
 
-    function loadCounter() {
-        return parseInt(localStorage.getItem(COUNTER_KEY) || "0");
-    }
-
     function incrementCounter() {
-        let count = loadCounter();
+        let count = parseInt(localStorage.getItem(COUNTER_KEY) || "0");
         count++;
         localStorage.setItem(COUNTER_KEY, count);
+        updatePersistentCounter(); // تحديث العنصر فورًا
         console.log("✅ Orders started:", count);
     }
 
@@ -323,7 +310,6 @@ const ot_bodyCheck = setInterval(() => {
 
     function attachButtons() {
         const timers = loadTimers();
-
         document.querySelectorAll(".header-medium.bold").forEach(orderEl => {
             const orderId = orderEl.textContent.trim();
             if (orderEl.parentElement.querySelector(".order-timer-btn")) return;
@@ -342,17 +328,13 @@ const ot_bodyCheck = setInterval(() => {
             wrapper.appendChild(btn);
             orderEl.appendChild(wrapper);
 
-            if (timers[orderId]) {
-                updateCountdown(btn, orderId, timers);
-            }
+            if (timers[orderId]) updateCountdown(btn, orderId, timers);
 
             btn.addEventListener("click", () => {
                 if (!timers[orderId]) {
                     timers[orderId] = Math.floor(Date.now() / 1000) + 15 * 60;
                     saveTimers(timers);
                     updateCountdown(btn, orderId, timers);
-
-                    // ✅ زيادة عداد الأوردرات عند الضغط على Start فقط
                     incrementCounter();
                 }
             });
@@ -363,7 +345,6 @@ const ot_bodyCheck = setInterval(() => {
         function tick() {
             const now = Math.floor(Date.now() / 1000);
             const remaining = timers[orderId] - now;
-
             if (remaining > 0) {
                 btn.textContent = "⏳ " + formatTime(remaining);
                 requestAnimationFrame(tick);
