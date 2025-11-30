@@ -1,17 +1,27 @@
-// =========================
-// Content script
-// =========================
-
-// =========================
-// Show Order Counter on ALT + 0
-// =========================
-
 // --- 0. Toast function ---
+
+let counterEnabled = JSON.parse(localStorage.getItem("orderCounterEnabled") || "true");
+
+function toggleOrderCounter() {
+    counterEnabled = !counterEnabled;
+    localStorage.setItem("orderCounterEnabled", JSON.stringify(counterEnabled));
+    showToast(counterEnabled ? "✅ تم تشغيل عداد الأوردرات" : "⛔ تم إيقاف عداد الأوردرات");
+    console.log("Order Counter Enabled:", counterEnabled);
+}
+
+document.addEventListener("keydown", (e) => {
+    if (e.altKey && e.code === "Digit9") {
+        toggleOrderCounter();
+        e.preventDefault();
+    }
+});
+
+
 function showToast(message, success = true) {
     const toast = document.createElement("div");
     toast.textContent = message;
     toast.style.position = "fixed";
-    toast.style.bottom = "80px";
+    toast.style.bottom = "20px";
     toast.style.left = "20px";
     toast.style.background = success ? "rgba(0,128,0,0.85)" : "rgba(200,0,0,0.85)";
     toast.style.color = "#fff";
@@ -114,7 +124,11 @@ function copyPayment() {
 
     let discountText = "";
     const discountHeader = Array.from(document.querySelectorAll("mat-expansion-panel-header"))
-        .find(h => h.querySelector("label")?.textContent.trim().toLowerCase() === "discount");
+        .find(h => {
+            const label = h.querySelector("label")?.textContent.trim().toLowerCase();
+            return label === "discount" || label === "lifecycle";
+        });
+
     if (discountHeader) {
         const p = discountHeader.querySelector("p.medium");
         if (p) discountText = ` + خصم ${p.textContent.replace(/[^\d.]/g, "")} ج`;
@@ -192,10 +206,21 @@ ch_observer.observe(document.body, { childList: true, subtree: true });
 function ot_parsePrice(text) {
     if (!text) return 0;
     let normalized = text.replace(/[^\d.,]/g, "").trim();
+
     const parts = normalized.split(".");
-    if (parts.length > 2) normalized = parts.slice(0, -1).join("") + "." + parts[parts.length - 1];
+    if (parts.length > 2) {
+        normalized = parts.slice(0, -1).join("") + "." + parts[parts.length - 1];
+    }
+
+
     const commaParts = normalized.split(",");
-    if (commaParts.length > 2) normalized = commaParts.slice(0, -1).join("") + "." + commaParts[commaParts.length - 1];
+    if (commaParts.length > 2) {
+        normalized = commaParts.slice(0, -1).join("") + "." + commaParts[commaParts.length - 1];
+    }
+
+
+    normalized = normalized.replace(/,/g, "");
+
     return parseFloat(normalized) || 0;
 }
 
@@ -209,6 +234,7 @@ function ot_formatPrice(num) {
 function ot_calculateOrderTotal(modal) {
     const itemsContainer = modal.querySelector("#order-items");
     if (!itemsContainer) return;
+
     const items = itemsContainer.querySelectorAll(".item");
     let total = 0;
 
@@ -223,24 +249,29 @@ function ot_calculateOrderTotal(modal) {
         const priceEl = item.querySelector(".item-price p");
         let parentPrice = 0;
         if (priceEl) parentPrice = ot_parsePrice(priceEl.textContent);
+
         total += parentPrice;
 
         const modifiers = item.querySelectorAll(".item-modifier");
         modifiers.forEach(mod => {
             const modPriceEl = mod.querySelector(".modifier-price p");
             if (!modPriceEl) return;
+
             let modPrice = ot_parsePrice(modPriceEl.textContent);
+
             let modQty = 1;
             const modQtyEl = mod.querySelector(".modifier-amount p");
             if (modQtyEl) {
                 const m = modQtyEl.textContent.match(/(\d+)/);
                 if (m) modQty = parseInt(m[1]);
             }
+
             total += modPrice * parentQty * modQty;
         });
     });
 
     console.log("✅ إجمالي الأوردر:", ot_formatPrice(total));
+
     let totalBox = itemsContainer.querySelector(".my-order-total");
     if (!totalBox) {
         totalBox = document.createElement("div");
@@ -260,14 +291,18 @@ function ot_calculateOrderTotal(modal) {
     totalBox.textContent = `إجمالي الأوردر : ${ot_formatPrice(total)} ج.م`;
 
     const feeElement = itemsContainer.querySelector(".fee");
-    if (feeElement && feeElement.parentNode) feeElement.parentNode.insertBefore(totalBox, feeElement);
-    else itemsContainer.appendChild(totalBox);
+    if (feeElement && feeElement.parentNode) {
+        feeElement.parentNode.insertBefore(totalBox, feeElement);
+    } else {
+        itemsContainer.appendChild(totalBox);
+    }
 }
 
 const ot_bodyCheck = setInterval(() => {
     const target = document.querySelector(".body");
     if (target) {
         clearInterval(ot_bodyCheck);
+
         const observer = new MutationObserver((mutations) => {
             mutations.forEach(m => {
                 m.addedNodes.forEach(node => {
@@ -277,6 +312,7 @@ const ot_bodyCheck = setInterval(() => {
                 });
             });
         });
+
         observer.observe(target, { childList: true, subtree: true });
     }
 }, 1000);
@@ -295,12 +331,18 @@ const ot_bodyCheck = setInterval(() => {
     }
 
     function incrementCounter() {
+        if (!JSON.parse(localStorage.getItem("orderCounterEnabled") || "true")) {
+            console.log("⛔ Counter is disabled. No increment.");
+            return;
+        }
+
         let count = parseInt(localStorage.getItem(COUNTER_KEY) || "0");
         count++;
         localStorage.setItem(COUNTER_KEY, count);
-        updatePersistentCounter(); // تحديث العنصر فورًا
+        updatePersistentCounter();
         console.log("✅ Orders started:", count);
     }
+
 
     function formatTime(seconds) {
         const m = Math.floor(seconds / 60).toString().padStart(2, "0");
