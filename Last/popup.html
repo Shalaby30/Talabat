@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Auto Disable</title>
+  <style>
+    body {
+      width: 240px;
+      font-family: sans-serif;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+
+
+    .btn {
+      padding: 8px;
+      width: 100%;
+      cursor: pointer;
+      margin-bottom: 8px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    .flex-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+
+    }
+
+    .item-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #4CAF50;
+    }
+
+    .item-toggle .txt {
+      font-size: 12px;
+      color: white;
+    }
+
+    .Disable {
+      background-color: red;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .Enable {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .container {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="buttons-container" class="flex-container">
+    <!-- Buttons will be injected here -->
+  </div>
+  <!-- <div class="item-toggle">
+    <span class="txt">فراخ شوايه</span>
+    <div>
+      <button class="Enable">تشغيل</button>
+      <button class="Disable">ايقاف</button>
+    </div>
+
+  </div> -->
+
+  <div class="note">Add content to </div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

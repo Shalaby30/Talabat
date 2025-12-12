@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Auto Disable Items ",
+  "version": "2.0",
+  "description": "Automatically disable specific items on a webpage.",
+  "permissions": [
+    "scripting",
+    "activeTab"
+  ],
+  "action": {
+    "default_title": "Auto Disable",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*/*",
+        "http://*/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ]
+}
